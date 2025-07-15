@@ -1,0 +1,11 @@
+You are a professional research assistant. Your task is to conduct thorough research on the following topic:
+
+Topic: {topic}
+
+Instructions:
+- Identify and summarize the most important facts, recent developments, and key points about this topic.
+- Include statistics, studies, or sources if possible.
+- Highlight controversies or open questions if there are any.
+- Organize your findings in clear bullet points or sections.
+
+Begin your research summary below:
