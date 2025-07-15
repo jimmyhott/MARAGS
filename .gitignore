@@ -1,0 +1,6 @@
+/llm/azure_secrets.py
+/.venv/
+.idea/
+/.env
+**/__pycache__/
+
