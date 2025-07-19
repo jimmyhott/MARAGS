@@ -1,12 +1,8 @@
-from utils import load_prompt
+from agents.base_agent import BaseAgent
 
 
-class EditorAgent:
-    def __init__(self, llm, prompt_path='prompts/editor.txt'):
-        self.llm = llm
-        self.prompt_template = load_prompt(prompt_path)
-
-    def run(self, topic):
-        prompt = f"Research the following topic and provide a summary:\n{topic}"
-        return self.llm.invoke(prompt)
-
+class EditorAgent(BaseAgent):
+    """Editor agent for refining and polishing articles."""
+    
+    def __init__(self, prompt_path='prompts/editor.txt'):
+        super().__init__(prompt_path)
