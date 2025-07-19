@@ -1,12 +1,9 @@
-from utils import load_prompt
+from agents.base_agent import BaseAgent
 
 
-class WriterAgent:
-    def __init__(self, llm, prompt_path='prompts/writer.txt'):
-        self.llm = llm
-        self.prompt_template = load_prompt(prompt_path)
-
-    def run(self, topic):
-        prompt = f"Research the following topic and provide a summary:\n{topic}"
-        return self.llm.invoke(prompt)
+class WriterAgent(BaseAgent):
+    """Writer agent for creating articles from research summaries."""
+    
+    def __init__(self, prompt_path='prompts/writer.txt'):
+        super().__init__(prompt_path)
 
