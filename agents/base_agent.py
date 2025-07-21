@@ -8,7 +8,7 @@ from llm.azure_secrets import AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT
 from utils import load_prompt
 
 
-class BaseAgent:
+class BaseLlm:
     """Base class for all agents with standardized functionality."""
     
     def __init__(self, prompt_path: str):
@@ -23,10 +23,15 @@ class BaseAgent:
         os.environ["OPENAI_API_VERSION"] = "2024-12-01-preview"
         os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"] = "gpt-4o"
 
-        self.llm = init_chat_model(
-            "azure_openai:gpt-4o",
-            azure_deployment=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
-        )
+        self.llm = init_chat_model(model_provider="azure_openai", model=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"])
+
+        # self.llm = AzureChatOpenAI(
+        #     azure_deployment=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
+        #     openai_api_key=os.environ["AZURE_OPENAI_API_KEY"],
+        #     azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        #     openai_api_version=os.environ["OPENAI_API_VERSION"],
+        #     temperature=0,
+        # )
         self.prompt_template = load_prompt(prompt_path)
 
     def process_query(self, state: Dict[str, Any]) -> Dict[str, Any]:

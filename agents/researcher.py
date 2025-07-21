@@ -1,7 +1,7 @@
-from agents.base_agent import BaseAgent
+from agents.base_agent import BaseLlm
 
 
-class ResearcherAgent(BaseAgent):
+class ResearcherLlm(BaseLlm):
     """Researcher agent for gathering information about topics."""
     
     def __init__(self, prompt_path='prompts/researcher.txt'):

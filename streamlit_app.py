@@ -194,6 +194,15 @@ def main():
         retry_attempts = st.slider("Retry Attempts", min_value=1, max_value=5, value=3)
         timeout_seconds = st.number_input("Timeout (seconds)", min_value=30, max_value=300, value=120, step=30)
         
+        # Editor Style Configuration
+        st.subheader("Editor Style")
+        editor_style = st.selectbox(
+            "Choose Editor Style",
+            options=["General", "Emotional", "Hilarious", "Critical"],
+            index=0,
+            help="Select the tone and style for the final article"
+        )
+        
         st.markdown("---")
         
         # Workflow Graph Display
@@ -208,7 +217,7 @@ def main():
 
     
     # Main content area
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([0.5, 3, 0.5])
     
     with col2:
         # Topic input
@@ -250,7 +259,8 @@ def main():
             config = WorkflowConfig(
                 enable_logging=enable_logging,
                 timeout_seconds=timeout_seconds,
-                retry_attempts=retry_attempts
+                retry_attempts=retry_attempts,
+                editor_style=editor_style
             )
             
             if st.session_state.debug_mode:

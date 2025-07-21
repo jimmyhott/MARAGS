@@ -1,41 +1,16 @@
-from langchain.tools import BaseTool
-from typing import Optional, Type
+from langchain_tavily import TavilySearch
 
-class WebSearchTool(BaseTool):
+from tools.tool_secrets import PROD_TAVILY_API_KEY
 
-    name = "web_search"
-    description = (
-        "Useful for when you need to answer questions by searching the web. "
-        "Input should be a search query."
+
+def get_search_tools():
+    tavily_search_tool = _get_tavily_search_tool()
+    tools = [tavily_search_tool]
+    return tools
+
+def _get_tavily_search_tool():
+    return TavilySearch(
+        max_results=10,
+        tavily_api_key=PROD_TAVILY_API_KEY,
+        description="Search the web for current information about topics. Use this to gather comprehensive research data, recent developments, statistics, and factual information. Provide specific search queries to get the most relevant results."
     )
-
-    def __init__(self, search_client, **kwargs):
-        """
-        search_client: An object with a .search(query: str) -> str method.
-        """
-        super().__init__(**kwargs)
-        self.search_client = search_client
-
-    def _run(self, query: str) -> str:
-        """
-        Run a web search for the given query and return the results as a string.
-        """
-        try:
-            results = self.search_client.search(query)
-            return results
-        except Exception as e:
-            return f"Web search failed: {e}"
-
-    async def _arun(self, query: str) -> str:
-        """
-        Asynchronous version of web search.
-        """
-        try:
-            if hasattr(self.search_client, "asearch"):
-                results = await self.search_client.asearch(query)
-            else:
-                # Fallback to sync if async not available
-                results = self.search_client.search(query)
-            return results
-        except Exception as e:
-            return f"Web search failed: {e}"
