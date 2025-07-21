@@ -1,7 +1,7 @@
-from agents.base_agent import BaseAgent
+from agents.base_agent import BaseLlm
 
 
-class EditorAgent(BaseAgent):
+class EditorLlm(BaseLlm):
     """Editor agent for refining and polishing articles."""
     
     def __init__(self, prompt_path='prompts/editor.txt'):

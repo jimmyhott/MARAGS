@@ -48,9 +48,9 @@ def test_imports():
         return False
     
     try:
-        from agents.researcher import ResearcherAgent
-        from agents.writer import WriterAgent
-        from agents.editor import EditorAgent
+        from agents.researcher import ResearcherLlm
+        from agents.writer import WriterLlm
+        from agents.editor import EditorLlm
         logger.info("✅ All agents imported successfully")
     except ImportError as e:
         logger.error(f"❌ Failed to import agents: {e}")
@@ -121,14 +121,14 @@ def test_agent_creation():
     
     try:
         from llm.azure_llm_client import get_azure_llm
-        from agents.researcher import ResearcherAgent
-        from agents.writer import WriterAgent
-        from agents.editor import EditorAgent
+        from agents.researcher import ResearcherLlm
+        from agents.writer import WriterLlm
+        from agents.editor import EditorLlm
         
         llm = get_azure_llm()
-        researcher = ResearcherAgent(llm)
-        writer = WriterAgent(llm)
-        editor = EditorAgent(llm)
+        researcher = ResearcherLlm(llm)
+        writer = WriterLlm(llm)
+        editor = EditorLlm(llm)
         
         logger.info("✅ All agents created successfully")
         return True

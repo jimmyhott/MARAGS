@@ -4,3 +4,4 @@
 /.env
 **/__pycache__/
 
+/tools/tool_secrets.py
