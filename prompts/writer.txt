@@ -6,7 +6,7 @@ Instructions:
 - Write for an educated but non-expert audience, ensuring clarity and accessibility.
 - Structure the article with a clear introduction, body, and conclusion.
 - Incorporate the research findings seamlessly, ensuring they are presented in a natural and readable manner.
-- Aim for approximately 1,000 words, balancing depth with conciseness.
+- Aim for approximately {word_count} words, balancing depth with conciseness.
 - Avoid overly specialized jargon, and ensure the content is engaging and informative.
 - Do not apply a specific tone or stylistic flair (e.g., conversational, formal, or persuasive), as the editor agent will refine the style.
 

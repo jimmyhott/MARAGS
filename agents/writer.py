@@ -1,3 +1,5 @@
+from typing import Callable
+
 from agents.base_agent import BaseLlm
 
 
@@ -6,4 +8,5 @@ class WriterLlm(BaseLlm):
     
     def __init__(self, prompt_path='prompts/writer.txt'):
         super().__init__(prompt_path)
+
 
