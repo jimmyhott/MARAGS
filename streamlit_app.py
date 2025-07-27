@@ -27,6 +27,26 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
+    /* Article images */
+    .article-container img {
+        max-width: 100%;
+        height: auto;
+        margin: 1.5rem auto;
+        display: block;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Image captions (italicized text after images) */
+    .article-container img + em,
+    .article-container img + p > em:first-child {
+        display: block;
+        text-align: center;
+        color: #666;
+        font-size: 0.9rem;
+        margin-top: -1rem;
+        margin-bottom: 1.5rem;
+    }
     .sub-header {
         font-size: 1.2rem;
         color: #666;
@@ -52,6 +72,13 @@ st.markdown("""
         padding: 2rem;
         border-radius: 10px;
         border-left: 5px solid #ffc107;
+        margin: 1rem 0;
+    }
+    .image-container {
+        background-color: #f0e6ff;
+        padding: 2rem;
+        border-radius: 10px;
+        border-left: 5px solid #6f42c1;
         margin: 1rem 0;
     }
     .progress-container {
@@ -91,6 +118,12 @@ st.markdown("""
         align-items: center;
         gap: 0.5rem;
     }
+    .generated-image {
+        max-width: 100%;
+        border-radius: 8px;
+        margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,11 +151,11 @@ def debug_info(message, data=None):
     return debug_msg
 
 
-def display_workflow_graph():
+def display_workflow_graph(enable_image_generation=True):
     """Display the workflow graph structure using Mermaid"""
     try:
         # Build the workflow to get the graph
-        compiled_graph = build_workflow()
+        compiled_graph = build_workflow(enable_image_generation=enable_image_generation)
 
         # Generate Mermaid diagram
         mermaid_code = compiled_graph.get_graph().draw_mermaid()
@@ -166,7 +199,7 @@ def main():
     # Header
     st.markdown('<h1 class="main-header">📝 Multi-Agents Blogpost Generation System</h1>', unsafe_allow_html=True)
     st.markdown(
-        '<p class="sub-header">Generate comprehensive blogpost using AI-powered research, writing, and editing agents</p>',
+        '<p class="sub-header">Generate comprehensive blogpost using AI-powered research, writing, and editing agents with optional image generation</p>',
         unsafe_allow_html=True)
 
     # Sidebar for configuration
@@ -200,6 +233,14 @@ def main():
         retry_attempts = st.slider("Retry Attempts", min_value=1, max_value=5, value=3)
         timeout_seconds = st.number_input("Timeout (seconds)", min_value=30, max_value=300, value=120, step=30)
 
+        # Image Generation Toggle
+        st.subheader("🎨 Image Generation")
+        enable_image_generation = st.checkbox(
+            "Enable Image Generation",
+            value=True,
+            help="Allow the editor to generate images to accompany the article"
+        )
+
         # Editor Style Configuration
         st.subheader("Editor Style")
         editor_style = st.selectbox(
@@ -218,7 +259,7 @@ def main():
 
         if st.session_state.get('show_graph', False):
             with st.expander("📊 Workflow Graph Structure", expanded=True):
-                display_workflow_graph()
+                display_workflow_graph(enable_image_generation)
 
     # Main content area
     col1, col2, col3 = st.columns([0.5, 3, 0.5])
@@ -264,7 +305,8 @@ def main():
                 enable_logging=enable_logging,
                 timeout_seconds=timeout_seconds,
                 retry_attempts=retry_attempts,
-                editor_style=editor_style
+                editor_style=editor_style,
+                enable_image_generation=enable_image_generation
             )
 
             if st.session_state.debug_mode:
@@ -272,7 +314,8 @@ def main():
                     "enable_logging": enable_logging,
                     "timeout_seconds": timeout_seconds,
                     "retry_attempts": retry_attempts,
-                    "editor_style": editor_style
+                    "editor_style": editor_style,
+                    "enable_image_generation": enable_image_generation
                 })
                 st.session_state.debug_logs.append(debug_msg)
 
@@ -317,7 +360,8 @@ def main():
                         "message_count": len(result.get('messages', [])),
                         "has_research_summary": bool(result.get('research_summary')),
                         "has_article_draft": bool(result.get('article_draft')),
-                        "has_edited_article": bool(result.get('edited_article'))
+                        "has_edited_article": bool(result.get('edited_article')),
+                        "has_generated_images": bool(result.get('generated_images'))
                     })
                     st.session_state.debug_logs.append(debug_msg)
 
@@ -359,6 +403,7 @@ def main():
             research_summary = results.get('research_summary')
             article_draft = results.get('article_draft')
             edited_article = results.get('edited_article')
+            generated_images = results.get('generated_images', [])
 
             # Research Summary
             if research_summary:
@@ -372,6 +417,54 @@ def main():
                 st.markdown('<div class="draft-container">', unsafe_allow_html=True)
                 st.markdown('<div class="stage-header">✍️ Draft Article</div>', unsafe_allow_html=True)
                 st.markdown(article_draft)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # Generated Images
+                # Check if there are generated images to embed
+                if generated_images:
+                    # Create a mapping of image prompts to URLs for easy replacement
+                    image_map = {}
+                    for img in generated_images:
+                        if img.get('url') and img.get('prompt'):
+                            image_map[img['prompt']] = img['url']
+
+                    # Replace image placeholders in the article with actual URLs
+                    final_article = edited_article
+
+                    # Look for markdown image syntax and ensure URLs are properly embedded
+                    import re
+
+                    # Pattern to find markdown images
+                    image_pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+
+                    def replace_image(match):
+                        alt_text = match.group(1)
+                        url = match.group(2)
+
+                        # If the URL is a placeholder or matches a prompt, replace with actual URL
+                        for prompt, actual_url in image_map.items():
+                            if prompt.lower() in alt_text.lower() or prompt.lower() in url.lower():
+                                return f'![{alt_text}]({actual_url})'
+
+                        # If it's already a valid URL, keep it
+                        if url.startswith('http'):
+                            return match.group(0)
+
+                        # Otherwise, try to find a matching image
+                        for prompt, actual_url in image_map.items():
+                            if any(word in alt_text.lower() for word in prompt.lower().split()):
+                                return f'![{alt_text}]({actual_url})'
+
+                        return match.group(0)
+
+                    final_article = re.sub(image_pattern, replace_image, final_article)
+
+                    # Display the article with embedded images
+                    st.markdown(final_article)
+                else:
+                    # No images, display article as is
+                    st.markdown(edited_article)
+
                 st.markdown('</div>', unsafe_allow_html=True)
 
             # Final Edited Article
@@ -394,6 +487,7 @@ def main():
                     st.text(f"Research Summary Length: {len(research_summary) if research_summary else 0} chars")
                     st.text(f"Article Draft Length: {len(article_draft) if article_draft else 0} chars")
                     st.text(f"Edited Article Length: {len(edited_article) if edited_article else 0} chars")
+                    st.text(f"Generated Images: {len(generated_images)}")
                     st.text(f"Total Messages: {len(results.get('messages', []))}")
                     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -414,6 +508,11 @@ def main():
                                         st.markdown(f"**🤖 AI Message {i + 1}:**")
                                         st.text(message.content[:500] + "..." if len(
                                             message.content) > 500 else message.content)
+                                        # Check for tool calls
+                                        if hasattr(message, 'tool_calls') and message.tool_calls:
+                                            st.markdown("**Tool Calls:**")
+                                            for tool_call in message.tool_calls:
+                                                st.text(f"  - {tool_call.get('name', 'Unknown tool')}")
                                     elif message.type == 'tool':
                                         st.markdown(f"**🔧 Tool Message {i + 1}:**")
                                         st.text(str(message.content)[:500] + "..." if len(
@@ -467,6 +566,8 @@ def main():
                             'has_research_summary': bool(v.get('research_summary')),
                             'has_article_draft': bool(v.get('article_draft')),
                             'has_edited_article': bool(v.get('edited_article')),
+                            'has_generated_images': bool(v.get('generated_images')),
+                            'image_count': len(v.get('generated_images', [])),
                             'message_count': len(v.get('messages', []))
                         }
                     else:

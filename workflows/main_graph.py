@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 
+from langgraph.constants import END
 from langgraph.graph import START
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode
@@ -12,9 +13,10 @@ from langgraph.prebuilt import ToolNode
 from agents.editor import EditorLlm
 from agents.researcher import ResearcherLlm
 from agents.writer import WriterLlm
+from tools.image_generation_tool import get_image_generation_tools
 from tools.web_search_tool import get_search_tools
 from utils import load_prompt
-from workflows.constant import RESEARCH_NODE, WRITE_NODE, EDIT_NODE, WEB_SEARCH_NODE
+from workflows.constant import RESEARCH_NODE, WRITE_NODE, EDIT_NODE, WEB_SEARCH_NODE, IMAGE_GENERATION_NODE
 from workflows.state import State
 
 # Configure logging
@@ -29,9 +31,11 @@ class WorkflowConfig:
     timeout_seconds: Optional[int] = None
     retry_attempts: int = 3
     editor_style: str = "General"
+    enable_image_generation: bool = True  # Add this flag
 
 
-def build_workflow(editor_style: str = "General"):
+
+def build_workflow(editor_style: str = "General", enable_image_generation: bool = True):
     # Create agents
     research_llm = ResearcherLlm()
     search_tools = get_search_tools()
@@ -41,6 +45,13 @@ def build_workflow(editor_style: str = "General"):
 
     writer_llm = WriterLlm()
     editor_llm = EditorLlm()
+    # Bind image generation tools to editor if enabled
+    if enable_image_generation:
+        image_tools = get_image_generation_tools()
+        editor_llm.bind_tools(image_tools)
+
+    # Load shared image generation instructions
+    image_instructions = load_prompt('prompts/image_generation_instruction.txt') if enable_image_generation else ""
 
     # Update editor prompt based on style
     editor_prompts = {
@@ -51,7 +62,18 @@ def build_workflow(editor_style: str = "General"):
     }
 
     if editor_style in editor_prompts:
-        editor_llm.prompt_template = load_prompt(editor_prompts[editor_style])
+        base_prompt = load_prompt(editor_prompts[editor_style])
+        # Append image instructions if enabled
+        if enable_image_generation:
+            editor_llm.prompt_template = base_prompt.replace(
+                "{article_draft}",
+                "{article_draft}\n\n" + image_instructions
+            )
+        else:
+            editor_llm.prompt_template = base_prompt
+
+    logger.info(editor_llm.prompt_template)
+
 
     # Create standardized agent nodes with explicit data flow
     researcher = research_llm.create_node(
@@ -71,12 +93,21 @@ def build_workflow(editor_style: str = "General"):
 
     search_tool_node = ToolNode(search_tools)
 
+    # Create image generation tool node if enabled
+    if enable_image_generation:
+        image_tool_node = ToolNode(image_tools)
+
     graph_builder = StateGraph(State)
 
     graph_builder.add_node(RESEARCH_NODE, researcher)
     graph_builder.add_node(WRITE_NODE, writer)
     graph_builder.add_node(EDIT_NODE, editor)
     graph_builder.add_node(WEB_SEARCH_NODE, search_tool_node)
+
+    # Add image generation node if enabled
+    if enable_image_generation:
+        graph_builder.add_node(IMAGE_GENERATION_NODE, image_tool_node)
+
     graph_builder.add_edge(START, RESEARCH_NODE)
 
     def route_after_research(state: State) -> str:
@@ -93,6 +124,21 @@ def build_workflow(editor_style: str = "General"):
             logger.warning(f"Routing error: {str(e)}, defaulting to write node")
             return WRITE_NODE
 
+    def route_after_edit(state: State) -> str:
+        """
+        Route to image_generation if the editor requests a tool call, otherwise finish.
+        """
+        try:
+            last_message = state["messages"][-1]
+            if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+                logger.info(f"Image generation tool calls detected, routing to image generation")
+                return IMAGE_GENERATION_NODE
+            return END  # Changed from "end" to END
+        except (IndexError, AttributeError) as e:
+            logger.warning(f"Routing error: {str(e)}, finishing workflow")
+            return END  # Changed from "end" to END
+
+
     graph_builder.add_conditional_edges(
         RESEARCH_NODE,
         route_after_research,
@@ -104,7 +150,21 @@ def build_workflow(editor_style: str = "General"):
 
     graph_builder.add_edge(WEB_SEARCH_NODE, RESEARCH_NODE)
     graph_builder.add_edge(WRITE_NODE, EDIT_NODE)
-    graph_builder.set_finish_point(EDIT_NODE)
+
+    # Add conditional routing after editor
+    if enable_image_generation:
+        graph_builder.add_conditional_edges(
+            EDIT_NODE,
+            route_after_edit,
+            {
+                IMAGE_GENERATION_NODE: IMAGE_GENERATION_NODE,
+                END: END
+            }
+        )
+        # After image generation, go back to editor to incorporate the images
+        graph_builder.add_edge(IMAGE_GENERATION_NODE, EDIT_NODE)
+    else:
+        graph_builder.set_finish_point(EDIT_NODE)
 
     # Compile the graph before returning
     return graph_builder.compile()
