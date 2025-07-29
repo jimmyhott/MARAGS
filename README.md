@@ -1,33 +1,76 @@
-# MARAGS - AI Article Generator
+# MARAGS - Multi-Agent Research and Article Generation System
 
-A comprehensive article generation system using AI-powered research, writing, and editing workflows.
+A comprehensive AI-powered article generation system that uses a three-stage workflow: Research → Write → Edit. Built with LangGraph for workflow orchestration and Streamlit for the user interface.
 
 ## Features
 
-- **Three-Stage Workflow**: Research → Write → Edit
-- **Multiple LLM Support**: Azure OpenAI and Local Ollama
-- **Streamlit UI**: User-friendly web interface
-- **Progress Tracking**: Real-time workflow progress
-- **Error Handling**: Robust retry mechanisms
-- **Configuration Options**: Customizable workflow settings
+- **Three-Stage AI Workflow**: Research → Write → Edit with specialized agents
+- **Multiple Editor Styles**: General, Emotional, Hilarious, and Critical
+- **Image Generation**: AI-generated images to accompany articles
+- **Web Search Integration**: Real-time information gathering via Tavily
+- **Azure OpenAI Integration**: Powered by GPT-4o for high-quality content
+- **Streamlit UI**: User-friendly web interface with real-time progress tracking
+- **Debug Mode**: Comprehensive debugging and logging capabilities
+- **Configurable Workflow**: Customizable settings for different use cases
+
+## Project Structure
+
+```
+MARAGS/
+├── agents/                    # AI agents for research, writing, editing
+│   ├── base_agent.py         # Base class for all agents
+│   ├── researcher.py         # Research agent for information gathering
+│   ├── writer.py             # Writing agent for article creation
+│   └── editor.py             # Editing agent for content refinement
+├── llm/                      # LLM client configurations
+│   ├── azure_llm_client.py  # Azure OpenAI client
+│   ├── azure_llm_wrapper.py # Azure LLM wrapper
+│   ├── azure_secrets.py     # Azure API configuration
+│   └── local_llm_client.py  # Local Ollama client
+├── tools/                    # External tool integrations
+│   ├── image_generation_tool.py # DALL-E 3 image generation
+│   ├── web_search_tool.py   # Tavily web search
+│   └── tool_secrets.py      # Tool API keys
+├── workflows/                # LangGraph workflow definitions
+│   ├── main_graph.py        # Main workflow orchestration
+│   ├── state.py             # Workflow state management
+│   └── constant.py          # Workflow constants
+├── prompts/                  # Agent prompt templates
+│   ├── researcher.txt        # Research agent prompts
+│   ├── writer.txt           # Writing agent prompts
+│   ├── editor.txt           # General editor prompts
+│   ├── editor_emotional.txt # Emotional style prompts
+│   ├── editor_hilarious.txt # Hilarious style prompts
+│   ├── editor_critical.txt  # Critical style prompts
+│   ├── editor_cantonese.txt # Cantonese style prompts
+│   └── image_generation_instruction.txt # Image generation prompts
+├── streamlit_app.py         # Main Streamlit web interface
+├── app.py                   # Command-line interface
+├── debug_streamlit.py       # Debug script for troubleshooting
+├── utils.py                 # Utility functions
+└── requirements.txt         # Python dependencies
+```
 
 ## Installation
 
-1. Clone the repository:
+1. **Clone the repository**:
 ```bash
 git clone <repository-url>
 cd MARAGS
 ```
 
-2. Install dependencies:
+2. **Install dependencies**:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Set up your environment variables (for Azure OpenAI):
+3. **Set up environment variables** (for Azure OpenAI):
 ```bash
 export AZURE_OPENAI_API_KEY="your-api-key"
 export AZURE_OPENAI_ENDPOINT="your-endpoint"
+export AZURE_DALL_E_3_API_KEY="your-dalle-api-key"
+export AZURE_DALL_E_3_ENDPOINT="your-dalle-endpoint"
+export PROD_TAVILY_API_KEY="your-tavily-api-key"
 ```
 
 ## Usage
@@ -42,6 +85,15 @@ streamlit run streamlit_app.py
 
 The app will open in your browser at `http://localhost:8501`
 
+**Features in the Streamlit interface:**
+- Topic input with word count specification
+- Editor style selection (General, Emotional, Hilarious, Critical)
+- Image generation toggle
+- Real-time progress tracking
+- Debug mode with detailed logging
+- Workflow visualization
+- Session state inspection
+
 ### Command Line Interface
 
 For programmatic usage:
@@ -50,20 +102,64 @@ For programmatic usage:
 python app.py
 ```
 
+### Programmatic Usage
+
+```python
+from workflows.main_graph import main_workflow, WorkflowConfig
+
+config = WorkflowConfig(
+    enable_logging=True,
+    timeout_seconds=120,
+    retry_attempts=3,
+    editor_style="General",
+    enable_image_generation=True
+)
+
+article = main_workflow("Your topic here", 1000, config)
+```
+
+## Workflow Stages
+
+### 1. Research Stage
+- **Agent**: `ResearcherLlm`
+- **Function**: Gathers comprehensive information about the topic
+- **Tools**: Web search via Tavily
+- **Output**: Research summary
+
+### 2. Writing Stage
+- **Agent**: `WriterLlm`
+- **Function**: Creates initial article draft based on research
+- **Input**: Research summary and topic
+- **Output**: Article draft
+
+### 3. Editing Stage
+- **Agent**: `EditorLlm`
+- **Function**: Refines and polishes the article
+- **Tools**: Image generation (optional)
+- **Output**: Final edited article with images
+
+## Editor Styles
+
+- **General**: Standard professional editing
+- **Emotional**: Empathetic and emotionally engaging content
+- **Hilarious**: Humorous and entertaining style
+- **Critical**: Analytical and critical perspective
+- **Cantonese**: Cantonese language style
+
 ## Debugging
 
 ### Built-in Debug Mode
 
-The Streamlit app includes a built-in debug mode:
+The Streamlit app includes comprehensive debugging:
 
-1. **Enable Debug Mode**: Check the "Enable Debug Mode" checkbox in the sidebar
-2. **View Debug Logs**: Click "View Debug Logs" to see detailed execution information
-3. **Error Inspection**: Detailed error information is automatically displayed in debug mode
-4. **Session State**: Inspect the current session state for troubleshooting
+1. **Enable Debug Mode**: Check the "Enable Debug Mode" checkbox
+2. **View Debug Logs**: Click "View Debug Logs" for detailed execution info
+3. **Error Inspection**: Automatic error display in debug mode
+4. **Session State**: Inspect current session state for troubleshooting
 
 ### Debug Script
 
-Use the dedicated debug script to test individual components:
+Use the dedicated debug script for component testing:
 
 ```bash
 # Run comprehensive tests
@@ -77,60 +173,46 @@ python debug_streamlit.py agents     # Test agent creation
 python debug_streamlit.py env        # Test environment
 ```
 
-### Common Debugging Techniques
-
-1. **Console Logs**: Check the terminal where you ran `streamlit run` for error messages
-2. **Browser Developer Tools**: Press F12 to inspect network requests and console errors
-3. **Streamlit Cache**: Clear cache with `streamlit cache clear`
-4. **Log Files**: Debug logs are saved to `streamlit_debug.log` and timestamped files
-
-### Troubleshooting Common Issues
+### Troubleshooting
 
 - **Import Errors**: Run `python debug_streamlit.py imports`
 - **LLM Connection Issues**: Check API keys and run `python debug_streamlit.py llm`
-- **Workflow Errors**: Enable debug mode in the Streamlit app for detailed error information
-- **Performance Issues**: Check the debug logs for timing information
+- **Workflow Errors**: Enable debug mode in Streamlit for detailed error info
+- **Performance Issues**: Check debug logs for timing information
 
 ## Configuration
 
-### Streamlit Interface Options
+### Environment Variables
 
-- **LLM Settings**: Choose between Azure OpenAI and Local Ollama
-- **Workflow Settings**: Configure logging, retry attempts, and timeout
-- **Advanced Options**: Return full workflow state for debugging
+Required for full functionality:
+- `AZURE_OPENAI_API_KEY`: Azure OpenAI API key
+- `AZURE_OPENAI_ENDPOINT`: Azure OpenAI endpoint
+- `AZURE_DALL_E_3_API_KEY`: DALL-E 3 API key (for image generation)
+- `AZURE_DALL_E_3_ENDPOINT`: DALL-E 3 endpoint
+- `PROD_TAVILY_API_KEY`: Tavily search API key
 
-### Programmatic Configuration
+### Workflow Configuration
 
 ```python
-from workflows.main_graph import main_workflow, WorkflowConfig
-
-config = WorkflowConfig(
-    use_local_llm=False,
-    enable_logging=True,
-    timeout_seconds=120,
-    retry_attempts=3
-)
-
-article = main_workflow("Your topic here", config)
+@dataclass
+class WorkflowConfig:
+    enable_logging: bool = True
+    timeout_seconds: Optional[int] = None
+    retry_attempts: int = 3
+    editor_style: str = "General"
+    enable_image_generation: bool = True
 ```
 
-## Project Structure
+## Dependencies
 
-```
-MARAGS/
-├── agents/           # AI agents for research, writing, editing
-├── llm/             # LLM client configurations
-├── workflows/       # LangGraph workflow definitions
-├── streamlit_app.py # Streamlit web interface
-├── app.py          # Command line interface
-└── requirements.txt # Python dependencies
-```
-
-## Workflow Stages
-
-1. **Research**: Gather comprehensive information about the topic
-2. **Write**: Create an initial draft based on research
-3. **Edit**: Polish and finalize the article
+- **streamlit**: Web interface
+- **langgraph**: Workflow orchestration
+- **langchain**: LLM integration
+- **langchain-openai**: OpenAI integration
+- **langchain-ollama**: Local LLM support
+- **openai**: OpenAI API client
+- **requests**: HTTP requests
+- **pydantic**: Data validation
 
 ## Contributing
 
