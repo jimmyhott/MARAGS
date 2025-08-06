@@ -5,3 +5,4 @@
 **/__pycache__/
 
 /tools/tool_secrets.py
+tools/tool_secrets.py
